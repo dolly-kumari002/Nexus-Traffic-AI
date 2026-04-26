@@ -76,5 +76,3 @@ This project is designed for:
 👩‍💻 Author
 **Dolly Kumari**
 
-⭐ If you like this project
-Give it a star ⭐ on GitHub!
