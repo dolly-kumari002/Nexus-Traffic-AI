@@ -5,7 +5,7 @@ import random
 from ultralytics import YOLO
 
 # Configuration
-NODE_API_URL = "http://localhost:5005/api/traffic/update"
+NODE_API_URL = "https://your-backend.onrender.com/api/traffic/update"
 
 def send_traffic_data(lane, count, emergency=False):
     """ Sends detection data to the NodeJS backend """
