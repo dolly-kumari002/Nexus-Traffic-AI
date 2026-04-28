@@ -6,7 +6,7 @@ import { AlertsFeed } from '../components/AlertsFeed';
 import { AdvancedControls } from '../components/AdvancedControls';
 import { ShieldAlert, Activity, GitFork } from 'lucide-react';
 
-const SOCKET_URL = 'http://localhost:5005';
+const SOCKET_URL = 'https://nexus-traffic-ai-f5k3.onrender.com';
 
 function App() {
   const [lanes, setLanes] = useState([]);
