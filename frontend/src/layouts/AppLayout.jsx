@@ -4,9 +4,10 @@ import { io } from 'socket.io-client';
 import { LayoutDashboard, Map, TrafficCone, ShieldAlert, BarChart3, Activity, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../theme/ThemeContext';
 
-const SOCKET_URL =
-  process.env.REACT_APP_API_URL ||
-  'https://nexus-traffic-ai-f5k3.onrender.com';
+// const SOCKET_URL =
+//   'https://nexus-traffic-ai-f5k3.onrender.com';
+const SOCKET_URL = "http://localhost:5005";
+
 
 export const AppLayout = () => {
   const [lanes, setLanes] = useState([]);
