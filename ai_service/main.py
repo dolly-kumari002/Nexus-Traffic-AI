@@ -1,78 +1,108 @@
-import cv2
+import os
 import time
-import requests
 import random
+import requests
 from ultralytics import YOLO
 
-# Configuration
-NODE_API_URL = "https://your-backend.onrender.com/api/traffic/update"
+# =========================
+# CONFIG
+# =========================
+NODE_API_URL = "https://nexus-traffic-ai-f5k3.onrender.com/api/traffic/update"
 
-def send_traffic_data(lane, count, emergency=False):
-    """ Sends detection data to the NodeJS backend """
+# Fix for OpenMP / Render crash
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+
+# =========================
+# SEND DATA (ROBUST VERSION)
+# =========================
+def send_traffic_data(lane, vehicle_count, emergency=False):
+    payload = {
+        "lane": lane,
+        "vehicleCount": vehicle_count,
+        "emergency": emergency
+    }
+
+    # 🔥 retry system (IMPORTANT for Render)
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                NODE_API_URL,
+                json=payload,
+                timeout=15
+            )
+
+            if response.status_code == 200:
+                print("✔ Data sent successfully")
+                return
+
+        except Exception as e:
+            print(f"Attempt {attempt+1} failed: {e}")
+            time.sleep(2)
+
+    print("❌ Failed to send after retries")
+
+
+# =========================
+# LOAD MODEL SAFELY
+# =========================
+def load_model():
     try:
-        requests.post(NODE_API_URL, json={
-            "lane": lane,
-            "count": count,
-            "emergency": emergency
-        }, timeout=2)
-    except Exception as e:
-        print(f"Failed to send data to Node.js backend: {e}")
+        print("Attempting to load YOLOv8 model...")
+        model = YOLO("yolov8n.pt", task="detect")
+        print("YOLOv8 Model loaded successfully.")
+        return model
 
+    except Exception as e:
+        print(f"YOLO failed, switching to simulation mode: {e}")
+        return None
+
+
+# =========================
+# MAIN ENGINE
+# =========================
 def main():
     print("Initializing Nexus AI Processing Engine...")
-    print("Attempting to load YOLOv8n model...")
-    model = None
-    try:
-        # Load a pretrained YOLOv8 nano model
-        model = YOLO('yolov8n.pt') 
-        print("YOLOv8 Model loaded successfully.")
-    except ImportError as e:
-        print("Ultralytics library not found. Running in SIMULATION mode.")
-    except Exception as e:
-        print(f"Warning: Could not load YOLO model. Running in SIMULATION mode. Error: {e}")
-        
-    print("AI Processing Service Started.")
 
-    lanes = ['north', 'south', 'east', 'west']
-    
-    # In a real deployed scenario, you would interface with a video stream or camera:
-    # cap = cv2.VideoCapture("path_to_live_traffic_feed.mp4")
-    # emergency_vehicles = ['ambulance', 'fire truck'] # Typically class indices depending on your mapping
-    
-    print("\n--- Listening to Simulated Traffic Feeds (Looping) ---\n")
-    
+    model = load_model()
+    lanes = ["north", "south", "east", "west"]
+
+    print("\n--- AI Traffic System Started ---\n")
+
     while True:
-        if model is None:
-            # Full Simulation Mode (if YOLO isn't installed)
+        try:
             lane = random.choice(lanes)
-            count = random.randint(0, 35) # simulate up to 35 cars
-            
-            # 5% chance of an emergency vehicle appearing
-            emergency = random.random() > 0.95 
-            
-            prefix = "[SIMULATED FEED]"
-            if emergency:
-                print(f"🚨 {prefix} DETECTED: EMERGENCY VEHICLE IN {lane.upper()} LANE! Sending Override Command.")
-            else:
-                print(f"🚦 {prefix} Scanned {lane.upper()} lane: found {count} vehicles.")
-            
-            send_traffic_data(lane, count, emergency)
-            time.sleep(4)
-        else:
-            # Pseudo-Real Mode
-            # Here we could pull actual frames. 
-            # For demonstration without a guaranteed camera source, we'll pseudo route it:
-            lane = random.choice(lanes)
-            count = random.randint(5, 25)
-            emergency = random.random() > 0.95
-            
-            if emergency:
-                print(f"🚨 [AI VISION] Detected EMERGENCY class in {lane.upper()} lane. Triggering priority corridor.")
-            else:
-                print(f"👁‍🗨 [AI VISION] Analyzed frame for {lane.upper()} lane. Detected total {count} vehicles.")
-            
-            send_traffic_data(lane, count, emergency)
-            time.sleep(3)
+            vehicle_count = random.randint(0, 40)
+            emergency = random.random() > 0.97  # rare event
 
+            # =========================
+            # SIMULATION MODE
+            # =========================
+            if model is None:
+                if emergency:
+                    print(f"🚨 EMERGENCY VEHICLE DETECTED IN {lane.upper()} LANE")
+                else:
+                    print(f"🚦 {lane.upper()} lane → {vehicle_count} vehicles (SIM)")
+
+            # =========================
+            # AI MODE (future video feed)
+            # =========================
+            else:
+                print(f"👁 AI scanning {lane.upper()} lane → {vehicle_count} vehicles")
+
+            # send to backend
+            send_traffic_data(lane, vehicle_count, emergency)
+
+            # Render-safe delay
+            time.sleep(4)
+
+        except Exception as e:
+            print(f"Loop error prevented: {e}")
+            time.sleep(5)
+
+
+# =========================
+# START
+# =========================
 if __name__ == "__main__":
     main()
